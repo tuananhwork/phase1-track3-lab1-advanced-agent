@@ -20,11 +20,22 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
+# Cấu hình LLM thật (OpenAI-compatible endpoint)
+cp .env.example .env
+# chỉnh 3 biến trong .env:
+# LLM_BASE_URL, LLM_API_KEY, LLM_MODEL
+
 # Chạy benchmark (với mock data)
-python run_benchmark.py --dataset data/hotpot_mini.json --out-dir outputs/sample_run
+python run_benchmark.py --mode mock --dataset data/hotpot_mini.json --out-dir outputs/sample_run
+
+# Tạo 100 mẫu HotpotQA deterministic (seed cố định)
+python scripts/prepare_hotpot_sample.py --sample-size 100 --seed 42 --out-path data/hotpot_100.json
+
+# Chạy benchmark với LLM thật
+python run_benchmark.py --mode real --dataset data/hotpot_100.json --out-dir outputs/real_run --reflexion-attempts 4
 
 # Chạy chấm điểm tự động
-python autograde.py --report-path outputs/sample_run/report.json
+python autograde.py --report-path outputs/real_run/report.json
 ```
 
 ## 4. Tiêu chí chấm điểm (Rubric)
@@ -39,3 +50,15 @@ python autograde.py --report-path outputs/sample_run/report.json
 - `src/reflexion_lab/reporting.py`: Logic xuất báo cáo benchmark.
 - `run_benchmark.py`: Script chính để chạy đánh giá.
 - `autograde.py`: Công cụ hỗ trợ chấm điểm nhanh dựa trên report.
+- `scripts/prepare_hotpot_sample.py`: Tải và tạo sample HotpotQA 100 mẫu theo đúng schema lab.
+
+## 5. Chế độ benchmark
+- `--mode mock`: dùng runtime giả lập để debug flow nhanh.
+- `--mode real`: gọi OpenAI-compatible endpoint thật; **bắt buộc** response có `usage.total_tokens`, nếu thiếu sẽ dừng run.
+
+## 6. Extensions đã hỗ trợ trong report
+- `structured_evaluator`
+- `reflection_memory`
+- `benchmark_report_json`
+- `adaptive_max_attempts`
+- `mock_mode_for_autograding` (chỉ khi chạy `--mode mock`)
